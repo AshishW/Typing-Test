@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Typing Test ⌨️</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        #text-display {
+            font-size: 1.2rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            height: 100px;
+            overflow: hidden;
+        }
+        #text-display span {
+            background-color: #ffffff;
+        }
+        #text-display span.correct {
+            background-color: #d4edda;
+        }
+        #text-display span.incorrect {
+            background-color: #f8d7da;
+        }
+        #user-input {
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 2px solid #3498db;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        #stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2980b9;
+        }
+        #start-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #start-btn:hover {
+            background-color: #27ae60;
+        }
+        #results {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Modern Typing Test ⌨️</h1>
+        <div id="text-display"></div>
+        <input type="text" id="user-input" placeholder="Start typing here..."  autocomplete="off" disabled>
+        <div id="stats">
+            <div class="stat">
+                <div class="stat-value" id="wpm">0</div>
+                <div class="stat-label">WPM</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="accuracy">100%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="time">60</div>
+                <div class="stat-label">Seconds</div>
+            </div>
+        </div>
+        <button id="start-btn">Start Test</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const textDisplay = document.getElementById('text-display');
+        const userInput = document.getElementById('user-input');
+        const startBtn = document.getElementById('start-btn');
+        const wpmDisplay = document.getElementById('wpm');
+        const accuracyDisplay = document.getElementById('accuracy');
+        const timeDisplay = document.getElementById('time');
+        const resultsDisplay = document.getElementById('results');
+
+        let timer;
+        let timeLeft = 60;
+        let currentText = '';
+        let startTime;
+        let testActive = false;
+        let correctChars = 0;
+        let totalChars = 0;
+        let animationFrameId; // Store the requestAnimationFrame ID
+
+        const texts = [
+            "The quick brown fox jumps over the lazy dog. Programming is the art of telling another human what one wants the computer to do. The only way to learn a new programming language is by writing programs in it.",
+            "In the world of technology, innovation is the key to success. Developers and engineers work tirelessly to create new solutions that can change the way we live and work. From artificial intelligence to blockchain, the possibilities seem endless.",
+            "The art of typing quickly and accurately is a valuable skill in today's digital age. Whether you're a student, professional, or casual computer user, being able to type efficiently can save you time and increase your productivity.",
+            "Artificial Intelligence is revolutionizing the world. From self-driving cars to virtual assistants, AI is transforming various industries. Machine learning algorithms enable computers to learn from data and make intelligent decisions. The future of AI holds immense potential and possibilities.",
+            "The Internet of Things is a network of interconnected devices. These devices communicate with each other to perform various tasks. From smart homes to industrial automation, IoT is enhancing efficiency and convenience. As technology advances, the number of IoT devices is expected to grow exponentially.",
+            "Cloud computing provides on-demand access to computing resources. It allows businesses to scale their operations without investing in physical infrastructure. With services like AWS, Azure, and Google Cloud, organizations can leverage the power of the cloud for data storage, processing, and analytics.",
+            "Quantum computing is an emerging field that leverages the principles of quantum mechanics. Unlike classical computers, quantum computers use qubits to perform computations. This allows them to solve complex problems much faster. While still in its infancy, quantum computing promises to revolutionize various industries.",
+            "Blockchain technology offers a secure and transparent way to record transactions. Initially developed for cryptocurrencies like Bitcoin, blockchain is now being used in various sectors. Its decentralized nature ensures data integrity and reduces the risk of fraud. The potential applications of blockchain are vast and diverse.",
+            "Augmented Reality blends digital content with the real world. By overlaying information onto the physical environment, AR enhances our perception of reality. Applications range from gaming to education, providing immersive experiences. As AR technology evolves, its impact on society will continue to grow.",
+            "Sustainable energy solutions are crucial for combating climate change. Renewable energy sources like solar, wind, and hydro power offer eco-friendly alternatives to fossil fuels. Advancements in technology are making these sources more efficient and accessible. Embracing sustainable energy is vital for a greener future.",
+            "Cybersecurity is essential in protecting digital information. With the rise of cyber threats, organizations must implement robust security measures. Encryption, firewalls, and multi-factor authentication are some of the techniques used to safeguard data. Staying informed about the latest security trends is crucial in maintaining a secure digital environment."
+        ];
+
+        function getRandomText() {
+            return texts[Math.floor(Math.random() * texts.length)];
+        }
+
+        function startTest() {
+            currentText = getRandomText();
+            displayText();
+            userInput.value = '';
+            userInput.disabled = false;
+            userInput.focus();
+            startBtn.textContent = "Test in Progress";
+            startBtn.disabled = true;
+            startTime = new Date().getTime();
+            timeLeft = 60;
+            testActive = true;
+            correctChars = 0;
+            totalChars = 0;
+            resultsDisplay.textContent = '';
+            timer = setInterval(updateTimer, 1000);
+            updateStats(); 
+        }
+
+        function displayText() {
+            textDisplay.innerHTML = currentText.split('').map(char => `<span>${char}</span>`).join('');
+        }
+
+        function endTest() {
+            testActive = false; // Set testActive to false immediately
+            clearInterval(timer);
+            cancelAnimationFrame(animationFrameId); // Cancel the pending animation frame
+            userInput.disabled = true;
+            startBtn.disabled = false;
+            startBtn.textContent = "Restart Test";
+            displayResults();
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timeDisplay.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                endTest();
+            }
+        }
+
+        function calculateWPM() {
+            const timeElapsed = (new Date().getTime() - startTime) / 60000; // time in minutes
+            const wordsTyped = correctChars / 5; // Assuming average word length of 5 characters
+            return Math.round(wordsTyped / timeElapsed);
+        }
+
+        function calculateAccuracy() {
+            return totalChars === 0 ? 100 : Math.round((correctChars / totalChars) * 100);
+        }
+
+        function updateStats() {
+            if (testActive) {
+                wpmDisplay.textContent = calculateWPM();
+                accuracyDisplay.textContent = `${calculateAccuracy()}%`;
+                animationFrameId = requestAnimationFrame(updateStats); // Store ID and request new frame
+            }
+        }
+
+        function displayResults() {
+            const finalWPM = calculateWPM();
+            const finalAccuracy = calculateAccuracy();
+            resultsDisplay.innerHTML = `
+                <h2>Test Results</h2>
+                <p>Words Per Minute: ${finalWPM}</p>
+                <p>Accuracy: ${finalAccuracy}%</p>
+            `;
+        }
+
+        // function checkInput() {
+        //     const inputText = userInput.value;
+        //     const textSpans = textDisplay.querySelectorAll('span');
+
+        //     correctChars = 0;
+        //     totalChars = inputText.length;
+
+        //     let allCorrect = true;
+        //     for (let i = 0; i < inputText.length; i++) {
+        //         if (i >= textSpans.length) {
+        //             break;
+        //         }
+
+        //         if (inputText[i] === textSpans[i].textContent) {
+        //             textSpans[i].className = 'correct';
+        //             correctChars++;
+        //         } else {
+        //             textSpans[i].className = 'incorrect';
+        //             allCorrect = false;
+        //         }
+        //     }
+
+        //     // Clear classes for characters not yet typed
+        //     for (let i = inputText.length; i < textSpans.length; i++) {
+        //         textSpans[i].className = '';
+        //     }
+
+        //     // Scroll text if necessary
+        //     if (inputText.length > 0 && inputText.length - 1 < textSpans.length) {
+        //         const lastTypedSpan = textSpans[inputText.length - 1];
+        //         lastTypedSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        //     }
+
+        //     // End test if all text is correctly typed and the test is still active
+        //     if (allCorrect && inputText.length === textSpans.length && testActive) {
+        //         endTest();
+        //     }
+        // }
+
+        function checkInput() {
+            const inputText = userInput.value;
+            const textSpans = textDisplay.querySelectorAll('span');
+
+            correctChars = 0;
+            totalChars = inputText.length;
+
+            let allCorrect = true; // We'll keep this for visual feedback, but it's not used for ending the test
+
+            for (let i = 0; i < inputText.length; i++) {
+                if (i >= textSpans.length) {
+                    break;
+                }
+
+                if (inputText[i] === textSpans[i].textContent) {
+                    textSpans[i].className = 'correct';
+                    correctChars++;
+                } else {
+                    textSpans[i].className = 'incorrect';
+                    allCorrect = false; 
+                }
+            }
+
+            // Clear classes for characters not yet typed
+            for (let i = inputText.length; i < textSpans.length; i++) {
+                textSpans[i].className = '';
+            }
+
+            // Scroll text if necessary
+            if (inputText.length > 0 && inputText.length - 1 < textSpans.length) {
+                const lastTypedSpan = textSpans[inputText.length - 1];
+                lastTypedSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // End test if the user has typed all the characters (even with errors)
+            if (inputText.length === textSpans.length && testActive) {
+                endTest();
+            }
+        }
+        startBtn.addEventListener('click', startTest);
+        userInput.addEventListener('input', checkInput);
+
+        // Initialize
+        textDisplay.textContent = "Click 'Start Test' to begin!";
+    </script>
+</body>
+</html>
